@@ -158,20 +158,20 @@ Security is layered so that no single device is the only control:
 | AWS security groups | Workload-level access | Accept the application port only from approved local source networks and required administrative sources. |
 | Application/host controls | Process and identity access | Authenticate users, validate requests, and restrict host services even when a network path exists. |
 
-Detailed subnets belong in `docs/addressing.md` during step 3. Exact firewall rules and their reasons belong in the step 4 security-policy document. The architecture requires those controls but does not replace those later deliverables.
+The exact subnets and expected routes are defined in [addressing.md](addressing.md). The firewall decisions, rule IDs, and validation cases are defined in [security-policy.md](security-policy.md). This architecture explains where those controls belong but does not replace their detailed designs.
 
 ## Encryption boundary
 
 WireGuard encryption begins on `edge-fw1` after local routing and firewall checks. The encrypted UDP packet crosses the normal Internet connection and reaches the public interface of the AWS WireGuard gateway. Decryption ends on that gateway before the original packet is routed to the private application.
 
 ```text
-Local packet in clear text                 Encrypted on the Internet               Clear text inside VPC
+Original IP flow visible                   WireGuard-encrypted on Internet          Original IP flow visible
 
 user1 -> core1 -> edge-fw1  |  edge-fw1 ===== WireGuard UDP ===== AWS VPN  |  AWS VPN -> private app
                              ^ encryption                              decryption ^
 ```
 
-“Clear text” here means the network sensor can inspect the original IP flow. The application may independently use HTTPS, in which case application content remains encrypted even on the private networks unless it is logged at an authorized endpoint.
+“Original IP flow visible” means a correctly placed network sensor can inspect the inner source address, destination address, protocol, and ports. It does not mean the application payload is necessarily readable. If the application uses HTTPS, that payload remains encrypted from `user1` to the application even after the AWS gateway removes the WireGuard layer.
 
 WireGuard protects data in transit across the untrusted Internet. It does not replace VLAN segmentation, firewalls, AWS security groups, application authentication, or host security.
 
@@ -220,7 +220,7 @@ Assume `user1` requests an approved service on the future private AWS applicatio
 - The initial topology uses eight containers and combines Zeek and Suricata on one sensor to limit resource usage.
 - `core1` and `edge-fw1` are separate FRR-speaking nodes so the lab can demonstrate a real OSPF adjacency.
 - The first VPN is routed rather than NAT-based and uses explicit AWS routes rather than OSPF across WireGuard.
-- Local and AWS address ranges must not overlap. Their final values are selected and documented in step 3.
+- Local and AWS address ranges must not overlap. Their selected values and routing behavior are documented in [addressing.md](addressing.md).
 - Exact Linux host architecture, image compatibility, and available memory must be checked before implementation.
 
 ## Acceptance evidence for this architecture
@@ -238,8 +238,8 @@ Later build phases should demonstrate that the implementation matches this docum
 - A correlated report whose claims cite stable event IDs.
 - A teardown and clean redeployment proving reproducibility.
 
-## Related planned documents
+## Related documents
 
-- `docs/addressing.md` — final subnet, gateway, allowed-communication, and expected-route tables (step 3).
-- `docs/security-policy.md` — firewall rule matrix and rule rationale (step 4).
-- `docs/threat-model.md` — assets, attacker positions, evidence, detections, and mitigations (step 5).
+- [addressing.md](addressing.md) — final subnet, gateway, allowed-communication, and expected-route tables.
+- [security-policy.md](security-policy.md) — firewall rule matrix, logging requirements, rule rationale, and planned validation.
+- [threat-model.md](threat-model.md) — assets, attacker positions, expected evidence, detections, mitigations, and safe simulations.
