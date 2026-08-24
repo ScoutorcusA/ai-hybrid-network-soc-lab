@@ -13,25 +13,64 @@ topology:
         - ip link add br0 type bridge vlan_filtering 1
         - ip link set br0 up
 
+        # User access port: VLAN 10
         - ip link set eth1 master br0
         - ip link set eth1 up
         - bridge vlan del dev eth1 vid 1
         - bridge vlan add dev eth1 vid 10 pvid untagged
 
+        # Guest access port: VLAN 20
         - ip link set eth2 master br0
         - ip link set eth2 up
         - bridge vlan del dev eth2 vid 1
         - bridge vlan add dev eth2 vid 20 pvid untagged
 
+        # Management access port: VLAN 30
         - ip link set eth3 master br0
         - ip link set eth3 up
         - bridge vlan del dev eth3 vid 1
         - bridge vlan add dev eth3 vid 30 pvid untagged
 
+        # Server access port: VLAN 40
         - ip link set eth4 master br0
         - ip link set eth4 up
         - bridge vlan del dev eth4 vid 1
         - bridge vlan add dev eth4 vid 40 pvid untagged
+
+        # Tagged trunk toward core1
+        - ip link set eth5 master br0
+        - ip link set eth5 up
+        - bridge vlan del dev eth5 vid 1
+        - bridge vlan add dev eth5 vid 10
+        - bridge vlan add dev eth5 vid 20
+        - bridge vlan add dev eth5 vid 30
+        - bridge vlan add dev eth5 vid 40
+
+    core1:
+      kind: linux
+      image: quay.io/frrouting/frr:10.7.0
+      sysctls:
+        net.ipv4.ip_forward: 1
+      exec:
+        - ip link set eth1 up
+
+        - ip link add link eth1 name eth1.10 type vlan id 10
+        - ip address add 10.10.10.1/24 dev eth1.10
+        - ip link set eth1.10 up
+
+        - ip link add link eth1 name eth1.20 type vlan id 20
+        - ip address add 10.10.20.1/24 dev eth1.20
+        - ip link set eth1.20 up
+
+        - ip link add link eth1 name eth1.30 type vlan id 30
+        - ip address add 10.10.30.1/24 dev eth1.30
+        - ip link set eth1.30 up
+
+        - ip link add link eth1 name eth1.40 type vlan id 40
+        - ip address add 10.10.40.1/24 dev eth1.40
+        - ip link set eth1.40 up
+
+        - ip address add 10.255.255.1/32 dev lo
 
     user1:
       kind: linux
@@ -39,6 +78,7 @@ topology:
       exec:
         - ip link set eth1 up
         - ip address add 10.10.10.10/24 dev eth1
+        - ip route replace default via 10.10.10.1
 
     guest1:
       kind: linux
@@ -46,6 +86,7 @@ topology:
       exec:
         - ip link set eth1 up
         - ip address add 10.10.20.10/24 dev eth1
+        - ip route replace default via 10.10.20.1
 
     admin1:
       kind: linux
@@ -53,6 +94,7 @@ topology:
       exec:
         - ip link set eth1 up
         - ip address add 10.10.30.10/24 dev eth1
+        - ip route replace default via 10.10.30.1
 
     server1:
       kind: linux
@@ -60,9 +102,11 @@ topology:
       exec:
         - ip link set eth1 up
         - ip address add 10.10.40.10/24 dev eth1
+        - ip route replace default via 10.10.40.1
 
   links:
     - endpoints: ["user1:eth1", "sw1:eth1"]
     - endpoints: ["guest1:eth1", "sw1:eth2"]
     - endpoints: ["admin1:eth1", "sw1:eth3"]
     - endpoints: ["server1:eth1", "sw1:eth4"]
+    - endpoints: ["core1:eth1", "sw1:eth5"]
