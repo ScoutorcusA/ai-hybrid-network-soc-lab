@@ -1,0 +1,99 @@
+# --------------------------------------------------
+# Operating-system files
+# --------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# --------------------------------------------------
+# Editors and IDEs
+# --------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --------------------------------------------------
+# Environment files and secrets
+# --------------------------------------------------
+.env
+.env.*
+!.env.example
+
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+**/.ssh/
+**/id_rsa
+**/id_ed25519
+**/secrets/
+
+# --------------------------------------------------
+# WireGuard secrets
+# --------------------------------------------------
+**/privatekey
+**/presharedkey
+**/wg*.conf
+!**/wg*.conf.example
+
+# --------------------------------------------------
+# Containerlab-generated state
+# Includes generated TLS keys and node state
+# --------------------------------------------------
+**/clab-*/
+
+# --------------------------------------------------
+# Python
+# --------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.venv/
+venv/
+
+# --------------------------------------------------
+# Terraform-generated files and local values
+# Keep .terraform.lock.hcl committed
+# --------------------------------------------------
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# --------------------------------------------------
+# Runtime monitoring data
+# Keep configurations, but not generated telemetry
+# --------------------------------------------------
+monitoring/logs/
+monitoring/data/
+logs/
+
+*.pcap
+*.pcapng
+
+# --------------------------------------------------
+# Temporary files and caches
+# --------------------------------------------------
+.cache/
+tmp/
+temp/
