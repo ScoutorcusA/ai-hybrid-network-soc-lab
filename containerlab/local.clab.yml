@@ -1,0 +1,68 @@
+name: soc-local
+
+mgmt:
+  network: soc-mgmt
+  ipv4-subnet: 172.30.100.0/24
+
+topology:
+  nodes:
+    sw1:
+      kind: linux
+      image: soclab-switch:0.1
+      exec:
+        - ip link add br0 type bridge vlan_filtering 1
+        - ip link set br0 up
+
+        - ip link set eth1 master br0
+        - ip link set eth1 up
+        - bridge vlan del dev eth1 vid 1
+        - bridge vlan add dev eth1 vid 10 pvid untagged
+
+        - ip link set eth2 master br0
+        - ip link set eth2 up
+        - bridge vlan del dev eth2 vid 1
+        - bridge vlan add dev eth2 vid 20 pvid untagged
+
+        - ip link set eth3 master br0
+        - ip link set eth3 up
+        - bridge vlan del dev eth3 vid 1
+        - bridge vlan add dev eth3 vid 30 pvid untagged
+
+        - ip link set eth4 master br0
+        - ip link set eth4 up
+        - bridge vlan del dev eth4 vid 1
+        - bridge vlan add dev eth4 vid 40 pvid untagged
+
+    user1:
+      kind: linux
+      image: soclab-endpoint:0.1
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.10.10/24 dev eth1
+
+    guest1:
+      kind: linux
+      image: soclab-endpoint:0.1
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.20.10/24 dev eth1
+
+    admin1:
+      kind: linux
+      image: soclab-endpoint:0.1
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.30.10/24 dev eth1
+
+    server1:
+      kind: linux
+      image: soclab-endpoint:0.1
+      exec:
+        - ip link set eth1 up
+        - ip address add 10.10.40.10/24 dev eth1
+
+  links:
+    - endpoints: ["user1:eth1", "sw1:eth1"]
+    - endpoints: ["guest1:eth1", "sw1:eth2"]
+    - endpoints: ["admin1:eth1", "sw1:eth3"]
+    - endpoints: ["server1:eth1", "sw1:eth4"]
