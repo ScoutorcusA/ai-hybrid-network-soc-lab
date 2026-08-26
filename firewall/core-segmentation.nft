@@ -1,0 +1,86 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet core_filter {
+    chain forward {
+        type filter hook forward priority 0;
+        policy drop;
+
+        # C-FWD-002: Drop malformed or untrackable packets.
+        ct state invalid \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_INVALID " \
+            counter drop
+
+        # C-FWD-001: Allow replies for approved connections.
+        ct state established,related counter accept
+
+        # C-FWD-010: User to approved HTTP/HTTPS application.
+        ip saddr 10.10.10.0/24 \
+            ip daddr 10.10.40.10 \
+            tcp dport { 80, 443 } \
+            ct state new \
+            counter accept
+
+        # C-FWD-011: User to future server-side DNS service.
+        ip saddr 10.10.10.0/24 \
+            ip daddr 10.10.40.10 \
+            udp dport 53 \
+            ct state new \
+            counter accept
+
+        ip saddr 10.10.10.0/24 \
+            ip daddr 10.10.40.10 \
+            tcp dport 53 \
+            ct state new \
+            counter accept
+
+        # C-FWD-030: Management SSH toward edge and server.
+        ip saddr 10.10.30.0/24 \
+            ip daddr { 10.255.0.2, 10.10.40.10 } \
+            tcp dport 22 \
+            ct state new \
+            counter accept
+
+        # C-FWD-031: Management diagnostic ICMP.
+        ip saddr 10.10.30.0/24 \
+            ip daddr { 10.255.0.2, 10.10.40.10 } \
+            icmp type echo-request \
+            counter accept
+
+        # C-FWD-020: Guest cannot reach local enterprise networks.
+        ip saddr 10.10.20.0/24 \
+            ip daddr 10.10.0.0/16 \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_GUEST_LOCAL " \
+            counter drop
+
+        # C-FWD-021: Guest cannot reach the future AWS VPC.
+        ip saddr 10.10.20.0/24 \
+            ip daddr 10.50.0.0/16 \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_GUEST_AWS " \
+            counter drop
+
+        # C-FWD-012: User cannot reach Management.
+        ip saddr 10.10.10.0/24 \
+            ip daddr 10.10.30.0/24 \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_USER_MGMT " \
+            counter drop
+
+        # C-FWD-040: Server cannot initiate toward User.
+        ip saddr 10.10.40.0/24 \
+            ip daddr 10.10.10.0/24 \
+            ct state new \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_SERVER_USER " \
+            counter drop
+
+        # C-FWD-099: Default-deny safety net.
+        limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_DEFAULT_DENY " \
+            counter drop
+    }
+}
