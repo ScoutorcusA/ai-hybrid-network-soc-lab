@@ -49,9 +49,14 @@ topology:
     core1:
       kind: linux
       image: quay.io/frrouting/frr:10.7.0
+      binds:
+        - configs/core1/daemons:/etc/frr/daemons
+        - configs/core1/frr.conf:/etc/frr/frr.conf
+        - configs/core1/vtysh.conf:/etc/frr/vtysh.conf
       sysctls:
         net.ipv4.ip_forward: 1
       exec:
+        # Trunk toward sw1
         - ip link set eth1 up
 
         - ip link add link eth1 name eth1.10 type vlan id 10
@@ -70,8 +75,29 @@ topology:
         - ip address add 10.10.40.1/24 dev eth1.40
         - ip link set eth1.40 up
 
+        # Router ID
         - ip address add 10.255.255.1/32 dev lo
 
+        # Transit link toward edge-fw1
+        - ip link set eth2 up
+        - ip address add 10.255.0.1/30 dev eth2
+
+    edge-fw1:
+      kind: linux
+      image: quay.io/frrouting/frr:10.7.0
+      binds:
+        - configs/edge-fw1/daemons:/etc/frr/daemons
+        - configs/edge-fw1/frr.conf:/etc/frr/frr.conf
+        - configs/edge-fw1/vtysh.conf:/etc/frr/vtysh.conf
+      sysctls:
+        net.ipv4.ip_forward: 1
+      exec:
+        # Transit link toward core1
+        - ip link set eth1 up
+        - ip address add 10.255.0.2/30 dev eth1
+
+        # Router ID
+        - ip address add 10.255.255.2/32 dev lo
     user1:
       kind: linux
       image: soclab-endpoint:0.1
@@ -110,3 +136,4 @@ topology:
     - endpoints: ["admin1:eth1", "sw1:eth3"]
     - endpoints: ["server1:eth1", "sw1:eth4"]
     - endpoints: ["core1:eth1", "sw1:eth5"]
+    - endpoints: ["core1:eth2", "edge-fw1:eth1"]
