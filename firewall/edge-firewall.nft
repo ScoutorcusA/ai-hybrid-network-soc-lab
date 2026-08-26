@@ -1,0 +1,49 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet edge_filter {
+    chain input {
+        type filter hook input priority 0;
+        policy drop;
+
+        # I-IN-002: Drop malformed or untrackable traffic.
+        ct state invalid \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_EDGE_INPUT_INVALID " \
+            counter drop
+
+        # I-IN-001: Allow replies to approved connections.
+        ct state established,related counter accept
+
+        # Allow local processes.
+        iifname "lo" counter accept
+
+        # Permit management from the Containerlab host only.
+        iifname "eth0" \
+            ip saddr 172.30.100.1 \
+            counter accept
+
+        # I-IN-021: Accept OSPF only from core1 on the transit link.
+        iifname "eth1" \
+            ip saddr 10.255.0.1 \
+            ip protocol ospf \
+            counter accept
+
+        # I-IN-010: Permit future SSH administration from admin1.
+        ip saddr 10.10.30.10 \
+            tcp dport 22 \
+            ct state new \
+            counter accept
+
+        # I-IN-011: Permit diagnostic ping from admin1.
+        ip saddr 10.10.30.10 \
+            icmp type echo-request \
+            counter accept
+
+        # I-IN-099: Deny everything else addressed to edge-fw1.
+        limit rate 5/second burst 10 packets \
+            log prefix "NFT_EDGE_INPUT_DENY " \
+            counter drop
+    }
+}

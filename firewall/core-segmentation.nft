@@ -3,6 +3,51 @@
 flush ruleset
 
 table inet core_filter {
+
+    chain input {
+        type filter hook input priority 0;
+        policy drop;
+
+        # I-IN-002: Drop malformed or untrackable traffic.
+        ct state invalid \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_INPUT_INVALID " \
+            counter drop
+
+        # I-IN-001: Allow replies to connections initiated by core1.
+        ct state established,related counter accept
+
+        # Local processes must be able to communicate over loopback.
+        iifname "lo" counter accept
+
+        # Permit management from the Containerlab host only.
+        # 172.30.100.1 is the Docker bridge gateway, not every container.
+        iifname "eth0" \
+            ip saddr 172.30.100.1 \
+            counter accept
+
+        # I-IN-020: Accept OSPF only from edge-fw1 on the transit link.
+        iifname "eth2" \
+            ip saddr 10.255.0.2 \
+            ip protocol ospf \
+            counter accept
+
+        # I-IN-010: Permit future SSH administration from admin1.
+        ip saddr 10.10.30.10 \
+            tcp dport 22 \
+            ct state new \
+            counter accept
+
+        # I-IN-011: Permit diagnostic ping from admin1.
+        ip saddr 10.10.30.10 \
+            icmp type echo-request \
+            counter accept
+
+        # I-IN-099: Deny everything else addressed to core1.
+        limit rate 5/second burst 10 packets \
+            log prefix "NFT_CORE_INPUT_DENY " \
+            counter drop
+    }
     chain forward {
         type filter hook forward priority 0;
         policy drop;
