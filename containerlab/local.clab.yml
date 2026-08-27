@@ -46,6 +46,14 @@ topology:
         - bridge vlan add dev eth5 vid 30
         - bridge vlan add dev eth5 vid 40
 
+        # Passive mirror destination toward sensor1.
+        # eth6 is intentionally not added to br0.
+        - ip link set eth6 up
+
+        # Copy traffic entering and leaving the VLAN trunk.
+        - tc qdisc add dev eth5 clsact
+        - tc filter add dev eth5 egress protocol all pref 10 matchall action mirred egress mirror dev eth6
+
     core1:
       kind: linux
       image: soclab-router:0.1
@@ -82,6 +90,17 @@ topology:
         # Transit link toward edge-fw1
         - ip link set eth2 up
         - ip address add 10.255.0.1/30 dev eth2
+
+        # Passive mirror destination toward sensor1.
+        # eth3 receives copies but has no IP address.
+        - ip link set eth3 up
+
+        # Copy traffic entering and leaving the core-edge transit link.
+        - tc qdisc add dev eth2 clsact
+        - tc filter add dev eth2 ingress protocol all pref 10 matchall action mirred egress mirror dev eth3
+        - tc filter add dev eth2 egress protocol all pref 10 matchall action mirred egress mirror dev eth3
+
+        # Load the router firewall after interface configuration.
         - nft -f /etc/nftables/core-segmentation.nft
     edge-fw1:
       kind: linux
@@ -101,6 +120,15 @@ topology:
         # Router ID
         - ip address add 10.255.255.2/32 dev lo
         - nft -f /etc/nftables/edge-firewall.nft
+    sensor1:
+      kind: linux
+      image: soclab-sensor:0.1
+      binds:
+        - ../monitoring/zeek/local.zeek:/opt/soc/zeek/local.zeek:ro
+        - ../monitoring/suricata/local.rules:/opt/soc/suricata/local.rules:ro
+        - ../monitoring/logs:/var/log/soc
+      sysctls:
+        net.ipv4.ip_forward: 0
     user1:
       kind: linux
       image: soclab-endpoint:0.1
@@ -142,3 +170,9 @@ topology:
     - endpoints: ["server1:eth1", "sw1:eth4"]
     - endpoints: ["core1:eth1", "sw1:eth5"]
     - endpoints: ["core1:eth2", "edge-fw1:eth1"]
+
+    # Internal VLAN-trunk mirror.
+    - endpoints: ["sw1:eth6", "sensor1:sniff0"]
+
+    # Core-to-edge transit mirror.
+    - endpoints: ["core1:eth3", "sensor1:sniff1"]
