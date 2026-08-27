@@ -58,7 +58,8 @@ suricata \
     -c /etc/suricata/suricata.yaml \
     -i sniff0 \
     -l /var/log/soc/suricata \
-    -S /opt/soc/suricata/local.rules &
+    -S /opt/soc/suricata/local.rules \
+    --set vlan.use-for-tracking=false &
 SURICATA_PID=$!
 
 cleanup() {
