@@ -1,0 +1,3 @@
+# Copy this file to terraform.tfvars and replace the documentation-only IP.
+# terraform.tfvars is intentionally ignored by Git.
+local_public_ip_cidr = "198.51.100.25/32"
