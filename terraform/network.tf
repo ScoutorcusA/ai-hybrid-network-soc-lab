@@ -77,9 +77,6 @@ resource "aws_security_group" "wireguard_gateway" {
   description = "WireGuard gateway; public ingress is restricted to the known local peer"
   vpc_id      = aws_vpc.soc.id
 
-  ingress = []
-  egress  = []
-
   tags = {
     Name = "${local.name_prefix}-wireguard-gateway-sg"
   }
@@ -105,9 +102,6 @@ resource "aws_security_group" "private_app" {
   name        = "${local.name_prefix}-private-app"
   description = "Private application access from approved routed local VLANs only"
   vpc_id      = aws_vpc.soc.id
-
-  ingress = []
-  egress  = []
 
   tags = {
     Name = "${local.name_prefix}-private-app-sg"
