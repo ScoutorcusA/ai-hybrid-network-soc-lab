@@ -70,3 +70,25 @@ variable "local_public_ip_cidr" {
     error_message = "local_public_ip_cidr must be one valid IPv4 host in /32 notation, for example 198.51.100.25/32."
   }
 }
+
+variable "ec2_instance_type" {
+  description = "Free Tier-eligible EC2 instance type used by both lab hosts."
+  type        = string
+  default     = "t3.micro"
+
+  validation {
+    condition     = var.ec2_instance_type == "t3.micro"
+    error_message = "This cost-controlled lab currently permits only t3.micro instances."
+  }
+}
+
+variable "admin_ssh_public_key_path" {
+  description = "Path on the Terraform runner to the administrator's SSH public key."
+  type        = string
+  default     = "~/.ssh/id_ed25519.pub"
+
+  validation {
+    condition     = fileexists(pathexpand(var.admin_ssh_public_key_path))
+    error_message = "admin_ssh_public_key_path must point to an existing SSH public key file."
+  }
+}

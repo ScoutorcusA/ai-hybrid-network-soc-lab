@@ -41,9 +41,72 @@ table inet edge_filter {
             icmp type echo-request \
             counter accept
 
+        # Permit authenticated tunnel diagnostics from the AWS peer.
+        iifname "wg0" \
+            ip saddr 10.254.0.2 \
+            icmp type echo-request \
+            counter accept
+
         # I-IN-099: Deny everything else addressed to edge-fw1.
         limit rate 5/second burst 10 packets \
             log prefix "NFT_EDGE_INPUT_DENY " \
+            counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0;
+        policy drop;
+
+        # E-FWD-002: Drop malformed or untrackable traffic.
+        ct state invalid \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_EDGE_FORWARD_INVALID " \
+            counter drop
+
+        # E-FWD-001: Allow replies to approved connections.
+        ct state established,related counter accept
+
+        # E-FWD-010: User HTTPS to the private AWS application.
+        ip saddr 10.10.10.0/24 \
+            ip daddr 10.50.20.10 \
+            oifname "wg0" \
+            tcp dport 443 \
+            ct state new \
+            counter accept
+
+        # E-FWD-011: Private Management SSH/HTTPS to approved AWS targets.
+        ip saddr 10.10.30.0/24 \
+            ip daddr { 10.50.10.10, 10.50.20.10 } \
+            oifname "wg0" \
+            tcp dport { 22, 443 } \
+            ct state new \
+            counter accept
+
+        # E-FWD-012: Management diagnostics to approved AWS targets.
+        ip saddr 10.10.30.0/24 \
+            ip daddr { 10.50.10.10, 10.50.20.10 } \
+            oifname "wg0" \
+            icmp type echo-request \
+            counter accept
+
+        # E-FWD-020: Guest traffic must never enter the AWS VPC.
+        ip saddr 10.10.20.0/24 \
+            ip daddr 10.50.0.0/16 \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_EDGE_GUEST_AWS " \
+            counter drop
+
+        # E-FWD-021: AWS workloads cannot initiate toward protected local zones.
+        ip saddr 10.50.0.0/16 \
+            ip daddr { 10.10.10.0/24, 10.10.30.0/24 } \
+            ct state new \
+            limit rate 5/second burst 10 packets \
+            log prefix "NFT_EDGE_AWS_LOCAL " \
+            counter drop
+
+        # E-FWD-099: Perimeter default-deny safety net.
+        limit rate 5/second burst 10 packets \
+            log prefix "NFT_EDGE_FORWARD_DENY " \
             counter drop
     }
 }

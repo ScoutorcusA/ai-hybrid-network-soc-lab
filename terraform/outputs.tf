@@ -37,3 +37,28 @@ output "private_app_security_group_id" {
   description = "Security group reserved for the future private application."
   value       = aws_security_group.private_app.id
 }
+
+output "wireguard_instance_id" {
+  description = "EC2 instance ID of the AWS WireGuard gateway."
+  value       = aws_instance.wireguard_gateway.id
+}
+
+output "wireguard_public_ip" {
+  description = "Stable public IPv4 endpoint used by the local WireGuard peer."
+  value       = aws_eip.wireguard.public_ip
+}
+
+output "wireguard_private_ip" {
+  description = "Private VPC address of the AWS WireGuard gateway."
+  value       = aws_instance.wireguard_gateway.private_ip
+}
+
+output "private_app_instance_id" {
+  description = "EC2 instance ID of the private demo application."
+  value       = aws_instance.private_app.id
+}
+
+output "private_app_private_ip" {
+  description = "Private VPC address of the demo application."
+  value       = aws_instance.private_app.private_ip
+}

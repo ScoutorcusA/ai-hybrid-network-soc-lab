@@ -81,6 +81,13 @@ table inet core_filter {
             ct state new \
             counter accept
 
+        # C-FWD-015: User HTTPS to the private AWS application.
+        ip saddr 10.10.10.0/24 \
+            ip daddr 10.50.20.10 \
+            tcp dport 443 \
+            ct state new \
+            counter accept
+
         # C-FWD-030: Management SSH toward edge and server.
         ip saddr 10.10.30.0/24 \
             ip daddr { 10.255.0.2, 10.10.40.10 } \
@@ -91,6 +98,18 @@ table inet core_filter {
         # C-FWD-031: Management diagnostic ICMP.
         ip saddr 10.10.30.0/24 \
             ip daddr { 10.255.0.2, 10.10.40.10 } \
+            icmp type echo-request \
+            counter accept
+
+        # C-FWD-033: Management access to approved AWS infrastructure.
+        ip saddr 10.10.30.0/24 \
+            ip daddr { 10.50.10.10, 10.50.20.10 } \
+            tcp dport { 22, 443 } \
+            ct state new \
+            counter accept
+
+        ip saddr 10.10.30.0/24 \
+            ip daddr { 10.50.10.10, 10.50.20.10 } \
             icmp type echo-request \
             counter accept
 

@@ -5,4 +5,5 @@ USER root
 RUN apk add --no-cache \
     iproute2-tc \
     nftables \
-    tcpdump
+    tcpdump \
+    wireguard-tools
