@@ -16,6 +16,7 @@ EDGE="clab-soc-local-edge-fw1"
 USER_NODE="clab-soc-local-user1"
 GUEST="clab-soc-local-guest1"
 ADMIN="clab-soc-local-admin1"
+SENSOR="clab-soc-local-sensor1"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -87,6 +88,67 @@ wait_for_handshake() {
   return 1
 }
 
+log_line_count() {
+  local file="$1"
+  local count
+
+  count=$(docker exec "$SENSOR" sh -c '
+    if [ -f "$1" ]; then
+      wc -l < "$1"
+    else
+      printf "0\n"
+    fi
+  ' sh "$file" 2>/dev/null || true)
+
+  count=$(printf '%s' "$count" | tr -d '[:space:]')
+
+  if [[ "$count" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "$count"
+  else
+    printf '0\n'
+  fi
+}
+
+fresh_json_record() {
+  local file="$1"
+  local start_line="$2"
+  local filter="$3"
+
+  docker exec "$SENSOR" sh -c '
+    file="$1"
+    start_line="$2"
+    filter="$3"
+
+    if [ ! -f "$file" ]; then
+      exit 1
+    fi
+
+    tail -n +"$start_line" "$file" |
+      jq -c "$filter" 2>/dev/null |
+      tail -n 1
+  ' sh "$file" "$start_line" "$filter"
+}
+
+wait_for_fresh_json_record() {
+  local file="$1"
+  local start_line="$2"
+  local filter="$3"
+  local record=""
+
+  for attempt in $(seq 1 20); do
+    record=$(fresh_json_record "$file" "$start_line" "$filter" 2>/dev/null || true)
+
+    if [[ -n "$record" ]]; then
+      printf '%s\n' "$record"
+      return 0
+    fi
+
+    sleep 1
+  done
+
+  return 1
+}
+
 printf '=== Hybrid tunnel and route state ===\n'
 
 expect_output \
@@ -113,6 +175,16 @@ expect_output \
   'policy drop' \
   docker exec "$EDGE" nft list chain inet edge_filter forward
 
+expect_output \
+  "sensor1 is running for hybrid monitoring" \
+  '^true$' \
+  docker inspect -f '{{.State.Running}}' "$SENSOR"
+
+ZEEK_TRANSIT_CONN_LOG='/var/log/soc/zeek/transit/conn.log'
+ZEEK_TRANSIT_SSL_LOG='/var/log/soc/zeek/transit/ssl.log'
+ZEEK_CONN_START=$(( $(log_line_count "$ZEEK_TRANSIT_CONN_LOG") + 1 ))
+ZEEK_SSL_START=$(( $(log_line_count "$ZEEK_TRANSIT_SSL_LOG") + 1 ))
+
 printf '\n=== Approved hybrid traffic ===\n'
 
 expect_output \
@@ -127,6 +199,42 @@ expect_success \
 expect_success \
   "Admin can ping the AWS WireGuard gateway private address" \
   docker exec "$ADMIN" ping -c 1 -W 3 10.50.10.10
+
+printf '\n=== Fresh hybrid monitoring evidence ===\n'
+
+ZEEK_CONN_FILTER='select(."id.orig_h" == "10.10.10.10" and ."id.resp_h" == "10.50.20.10" and ."id.resp_p" == 443 and .proto == "tcp" and .service == "ssl" and .conn_state == "SF")'
+ZEEK_SSL_FILTER='select(."id.orig_h" == "10.10.10.10" and ."id.resp_h" == "10.50.20.10" and ."id.resp_p" == 443 and .established == true)'
+ZEEK_CONN_RECORD=""
+ZEEK_SSL_RECORD=""
+
+if ZEEK_CONN_RECORD=$(wait_for_fresh_json_record \
+  "$ZEEK_TRANSIT_CONN_LOG" \
+  "$ZEEK_CONN_START" \
+  "$ZEEK_CONN_FILTER"); then
+  pass "Zeek recorded the fresh User-to-AWS TLS connection"
+else
+  fail "Zeek recorded the fresh User-to-AWS TLS connection"
+fi
+
+if ZEEK_SSL_RECORD=$(wait_for_fresh_json_record \
+  "$ZEEK_TRANSIT_SSL_LOG" \
+  "$ZEEK_SSL_START" \
+  "$ZEEK_SSL_FILTER"); then
+  pass "Zeek recorded the fresh completed TLS session"
+else
+  fail "Zeek recorded the fresh completed TLS session"
+fi
+
+ZEEK_CONN_UID=$(jq -r '.uid // empty' <<<"$ZEEK_CONN_RECORD" 2>/dev/null || true)
+ZEEK_SSL_UID=$(jq -r '.uid // empty' <<<"$ZEEK_SSL_RECORD" 2>/dev/null || true)
+
+if [[ -n "$ZEEK_CONN_UID" && "$ZEEK_CONN_UID" == "$ZEEK_SSL_UID" ]]; then
+  pass "Zeek connection and TLS records share the same uid"
+else
+  fail "Zeek connection and TLS records share the same uid"
+  printf '  conn.log uid: %s\n' "${ZEEK_CONN_UID:-missing}"
+  printf '  ssl.log uid: %s\n' "${ZEEK_SSL_UID:-missing}"
+fi
 
 printf '\n=== Prohibited hybrid traffic ===\n'
 
