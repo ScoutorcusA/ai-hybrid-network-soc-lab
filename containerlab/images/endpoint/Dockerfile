@@ -5,6 +5,7 @@ RUN apk add --no-cache \
     darkhttpd \
     iproute2 \
     iputils \
+    nmap \
     tcpdump
 
 CMD ["sleep", "infinity"]
