@@ -3,3 +3,7 @@ alert icmp 10.10.20.0/24 any -> 10.10.40.10 any (msg:"SOC LAB Guest ICMP attempt
 alert http 10.10.10.0/24 any -> 10.10.40.10 80 (msg:"SOC LAB Approved user HTTP request"; flow:to_server,established; http.method; content:"GET"; sid:1000002; rev:1;)
 
 alert tcp 10.10.20.0/24 any -> 10.10.40.10 any (msg:"SOC LAB Guest TCP port scan attempt"; flags:S; flow:stateless; threshold:type both, track by_src, count 5, seconds 10; classtype:network-scan; sid:1000003; rev:1;)
+
+# This detects the connection pattern. server1's sshd.log is the authoritative
+# evidence that the encrypted password authentication itself failed.
+alert tcp 10.10.30.10 any -> 10.10.40.10 22 (msg:"SOC LAB Repeated SSH connections from Management endpoint"; flags:S; flow:stateless; threshold:type both, track by_src, count 5, seconds 60; sid:1000004; rev:1;)

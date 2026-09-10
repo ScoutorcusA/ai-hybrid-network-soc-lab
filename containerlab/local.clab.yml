@@ -158,11 +158,22 @@ topology:
       image: soclab-endpoint:0.1
       binds:
         - configs/server1:/www:ro
+        - configs/server1-ssh/sshd_config:/etc/ssh/sshd_config:ro
+        - ../monitoring/logs/server1:/var/log/soc
       exec:
         - ip link set eth1 up
         - ip address add 10.10.40.10/24 dev eth1
         - ip route replace default via 10.10.40.1
         - darkhttpd /www --port 80 --daemon --no-listing
+        # Lab-only SSH service for controlled failed-authentication simulations.
+        # The disposable account password is generated at startup and never stored in Git.
+        - adduser -D -s /bin/ash socops
+        - >-
+          sh -c 'temporary_password="$(head -c 32 /dev/urandom | base64)";
+          printf "socops:%s\n" "$temporary_password" | chpasswd'
+        - ssh-keygen -A
+        - mkdir -p /run/sshd /var/log/soc
+        - /usr/sbin/sshd -E /var/log/soc/sshd.log
   links:
     - endpoints: ["user1:eth1", "sw1:eth1"]
     - endpoints: ["guest1:eth1", "sw1:eth2"]

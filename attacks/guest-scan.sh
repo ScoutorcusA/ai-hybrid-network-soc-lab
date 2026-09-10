@@ -22,7 +22,7 @@ if [[ "$(docker inspect -f '{{.State.Running}}' "$GUEST" 2>/dev/null || true)" !
   exit 1
 fi
 
-if ! docker exec "$GUEST" command -v nmap >/dev/null 2>&1; then
+if ! docker exec "$GUEST" sh -c 'command -v nmap >/dev/null 2>&1'; then
   printf 'Nmap is not installed inside %s. Redeploy the lab first.\n' "$GUEST" >&2
   exit 1
 fi

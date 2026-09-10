@@ -1,0 +1,19 @@
+# Lab-only SSH configuration for the Phase 6B failed-authentication simulation.
+# Password authentication is enabled solely so known-wrong credentials can create
+# server-side evidence. The disposable account password is generated at startup.
+
+Port 22
+ListenAddress 0.0.0.0
+
+PermitRootLogin no
+PasswordAuthentication yes
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+AllowUsers socops
+
+MaxAuthTries 1
+LoginGraceTime 15
+LogLevel VERBOSE
+X11Forwarding no
+AllowTcpForwarding no
+PermitTunnel no

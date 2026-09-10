@@ -6,6 +6,8 @@ RUN apk add --no-cache \
     iproute2 \
     iputils \
     nmap \
+    openssh \
+    sshpass \
     tcpdump
 
 CMD ["sleep", "infinity"]

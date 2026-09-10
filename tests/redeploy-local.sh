@@ -87,6 +87,7 @@ fi
 mkdir -p \
   "$LOG_DIR/zeek/internal" \
   "$LOG_DIR/zeek/transit" \
+  "$LOG_DIR/server1" \
   "$LOG_DIR/suricata"
 
 build_image soclab-switch:0.1 "$REPO_ROOT/containerlab/images/switch"
