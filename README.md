@@ -4,7 +4,7 @@ I built this project to practice networking, cloud security, detection engineeri
 
 The AI is not the source of truth. Python calculates the facts first, the model drafts a report, a validator rejects unsupported values, and a human still reviews the final meaning.
 
-> [Read my full build and investigation writeup in Notion](https://www.notion.so/AI-Assisted-Hybrid-Network-SOC-Lab-3bdc7041bd0a815da536c3a0462cc7a7)
+> [Read my full build and investigation writeup on my website](https://nishkamk.com/blog/ai-assisted-hybrid-network-soc-lab/)
 
 ## What I built
 
