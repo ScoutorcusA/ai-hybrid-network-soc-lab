@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soc-lab-analyst"
+version = "0.1.0"
+description = "Evidence-grounded incident analysis for the hybrid network SOC lab"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.7,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+ai = ["openai>=2,<3"]
+
+[project.scripts]
+soc-analyst = "soc_analyst.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["soc_analyst*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

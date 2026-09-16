@@ -87,6 +87,8 @@ override.tf.json
 monitoring/logs/
 monitoring/data/
 logs/
+python/runs/
+python/outputs/
 
 *.pcap
 *.pcapng
